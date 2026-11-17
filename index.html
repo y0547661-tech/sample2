@@ -1,0 +1,208 @@
+<html lang="ja"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>運動会 得点表</title>
+<style>
+:root{--bg:#f5f7fa;--surface:#fff;--text:#1d2733;--muted:#66727f;--line:#d9e0e7;--accent:#1f6feb}
+@media (prefers-color-scheme:dark){:root{--bg:#12171d;--surface:#1b222b;--text:#e8edf2;--muted:#93a0ad;--line:#2d3743;--accent:#5b9dff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.6}
+main{max-width:960px;margin:0 auto;padding:20px 14px 48px}
+h1{margin:0 0 6px;font-size:1.6rem}
+h1 input{font:inherit;font-weight:700;border:0;border-bottom:2px dashed transparent;background:transparent;color:inherit;width:100%;padding:2px 0}
+h1 input:hover,h1 input:focus{border-bottom-color:var(--line);outline:none}
+.status{display:inline-block;font-size:.8rem;padding:2px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-bottom:12px}
+.status.ok{color:#2da44e;border-color:#2da44e}.status.ng{color:#d1242f;border-color:#d1242f}
+.sheet{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{padding:0;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+th:last-child,td:last-child{border-right:0}
+thead th{border-top:6px solid var(--c);background:var(--surface)}
+th.evh{width:34%;text-align:left;padding:8px 10px;font-weight:600;color:var(--muted);font-size:.9rem}
+input.cell,input.name{width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:10px;outline:none}
+input.cell{text-align:right;font-variant-numeric:tabular-nums}
+input.name{font-weight:700;text-align:center}
+input.cell:focus,input.name:focus{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 0 0 0 2px var(--accent)}
+td.act{width:44px;text-align:center}
+button,.btn{font:inherit;cursor:pointer}
+.del{border:0;background:transparent;color:var(--muted);padding:6px 10px;border-radius:6px}
+.del:hover{color:#d1242f}
+tfoot td{background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-weight:800;font-size:1.15rem;text-align:right;padding:12px 10px;font-variant-numeric:tabular-nums;border-bottom:0}
+tfoot td.lbl{text-align:left;font-size:.95rem}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:8px 14px;border-radius:8px;text-decoration:none;display:inline-block}
+.btn:hover{border-color:var(--accent)}.btn.main{background:var(--accent);border-color:var(--accent);color:#fff}.btn.warn{color:#d1242f}
+.pw{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.9rem;color:var(--muted)}
+.pw input{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)}
+.msg{margin-top:8px;color:var(--muted);font-size:.9rem;min-height:1.5em}
+.setup{background:var(--surface);border:1px solid #d1242f;border-radius:8px;padding:14px;margin-bottom:14px}
+/* 表示専用 */
+body.display main{max-width:1200px}
+body.display h1{font-size:clamp(1.8rem,4vw,3rem);text-align:center}
+body.display th.tn{padding:14px 8px;font-size:clamp(1.2rem,3vw,2rem);text-align:center}
+body.display th.evh{font-size:clamp(1rem,2.2vw,1.5rem)}
+body.display td{padding:12px 14px;font-size:clamp(1.2rem,3vw,2.2rem);text-align:right;font-variant-numeric:tabular-nums}
+body.display td.evn{text-align:left;font-weight:600}
+body.display tfoot td{font-size:clamp(1.6rem,4vw,3rem);padding:16px 14px}
+body.display tfoot td.lbl{font-size:clamp(1.2rem,3vw,2rem)}
+body.display table{min-width:0}
+body.display .only-edit{display:none}
+body:not(.display) .only-display{display:none}
+</style>
+</head>
+<body>
+<main>
+  <!-- ★ Apps Script をデプロイして得た「ウェブアプリのURL」を、下の引用符の中に貼り付けます -->
+  <h1><input id="title" aria-label="タイトル" maxlength="40" class="only-edit"><span id="titleText" class="only-display"></span></h1>
+  <div class="status ng" id="status">未設定</div>
+
+  <div class="sheet"><table><thead id="thead"></thead><tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table></div>
+
+  <div class="tools only-edit">
+    <button class="btn main" id="addEvent">種目を追加</button>
+    <button class="btn" id="addTeam">組を追加</button>
+    <a class="btn" id="dispLink" href="?view=display" target="_blank" rel="noopener">表示用画面を開く</a>
+    <button class="btn warn" id="reset">点数をすべて消す</button>
+  </div>
+  <div class="pw only-edit">編集パスワード
+    <input id="pw" type="password" autocomplete="off" aria-label="編集パスワード">
+    <button class="btn" id="pwSave">保存</button>
+  </div>
+  <div class="msg only-edit" id="msg" role="status"></div>
+</main>
+
+<script>
+var API_URL = "https://script.google.com/macros/s/AKfycbw61Tzq2hwSu41gCOtR3x0Y0ne-LppzCgdf2_1Bf5JlSetNe2XhnsWiZUWpNpB1mzSuKg/exec";   // ← ここに Apps Script のウェブアプリURL(https://script.google.com/macros/s/.../exec)を貼る
+var POLL_MS = 5000; // 他の端末の入力を取り込む間隔(ミリ秒)
+
+(function(){
+  var COLORS=["#2da44e","#1f6feb","#e0a800","#d1242f","#8a96a3","#a371f7","#e16f24","#d4509a"];
+  var S=null, dirty={}, timers={}, q=Promise.resolve();
+  var isDisp=/view=display/.test(location.search)||location.hash==="#display";
+  var key=lsGet("undokai-key")||"";
+
+  function lsGet(k){ try{return localStorage.getItem(k);}catch(e){return null;} }
+  function lsSet(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function num(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
+  function fmt(n){ return Math.round(n*100)/100; }
+  function status(t,c){ var s=$("status"); s.textContent=t; s.className="status"+(c?" "+c:""); }
+  function say(m){ $("msg").textContent=m; setTimeout(function(){ if($("msg").textContent===m) $("msg").textContent=""; },4000); }
+
+  if(isDisp) document.body.classList.add("display");
+  $("pw").value=key;
+
+  /* ---- 通信 ---- */
+  function getState(){ return fetch(API_URL+(API_URL.indexOf("?")>-1?"&":"?")+"t="+Date.now()).then(function(r){return r.json();}); }
+  function post(msg){
+    msg.key=key;
+    return fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(msg)}).then(function(r){return r.json();});
+  }
+  function send(msg,dk,stamp){
+    q=q.then(function(){ return post(msg); }).then(function(res){
+      if(dirty[dk]===stamp) delete dirty[dk];
+      if(res.error){ status(res.error==="auth"?"パスワードが違います":"保存できませんでした","ng"); return; }
+      apply(res);
+    }).catch(function(){ if(dirty[dk]===stamp) delete dirty[dk]; status("通信できませんでした","ng"); });
+  }
+  function change(msg,dk){ // 入力を少しまとめてから送る
+    var stamp=Date.now()+Math.random(); dirty[dk]=stamp;
+    clearTimeout(timers[dk]); timers[dk]=setTimeout(function(){ send(msg,dk,stamp); },400);
+  }
+  function refresh(){
+    if(Object.keys(dirty).length) return;
+    getState().then(function(s){ if(!Object.keys(dirty).length) apply(s); }).catch(function(){ status("通信できませんでした","ng"); });
+  }
+
+  /* ---- 描画 ---- */
+  var sig="";
+  function apply(s){
+    if(!s||s.error) return;
+    S=s; status("接続済み "+new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"}),"ok");
+    render();
+  }
+  function render(){
+    if(isDisp){
+      $("titleText").textContent=S.title; document.title=S.title+"(表示)";
+      var h='<tr><th class="evh">競技</th>';
+      S.teams.forEach(function(t,i){ h+='<th class="tn" style="--c:'+COLORS[i%8]+'">'+esc(t)+'</th>'; });
+      $("thead").innerHTML=h+'</tr>';
+      $("tbody").innerHTML=S.events.map(function(e){
+        return '<tr><td class="evn">'+esc(e.name)+'</td>'+S.teams.map(function(t,i){return '<td>'+esc(e.s[i])+'</td>';}).join("")+'</tr>';
+      }).join("");
+      $("tfoot").innerHTML='<tr><td class="lbl">合計</td>'+S.teams.map(function(){return '<td class="tot">0</td>';}).join("")+'</tr>';
+      totals(); return;
+    }
+    document.title=S.title;
+    var ns=S.teams.length+"|"+S.events.map(function(e){return e.r;}).join(",");
+    if(ns!==sig){
+      sig=ns;
+      var h2='<tr><th class="evh">種目</th>';
+      S.teams.forEach(function(t,i){ h2+='<th style="--c:'+COLORS[i%8]+'"><input class="name" data-r="1" data-c="'+(i+2)+'" aria-label="組の名前"></th>'; });
+      $("thead").innerHTML=h2+'<th class="act"></th></tr>';
+      $("tbody").innerHTML=S.events.map(function(e){
+        return '<tr><td><input class="name" style="text-align:left" data-r="'+e.r+'" data-c="1" aria-label="種目名"></td>'+
+          S.teams.map(function(t,i){return '<td><input class="cell" inputmode="decimal" data-r="'+e.r+'" data-c="'+(i+2)+'" aria-label="点数"></td>';}).join("")+
+          '<td class="act"><button class="del" data-del="'+e.r+'" aria-label="削除">✕</button></td></tr>';
+      }).join("");
+      $("tfoot").innerHTML='<tr><td class="lbl">合計</td>'+S.teams.map(function(){return '<td class="tot">0</td>';}).join("")+'<td class="act"></td></tr>';
+    }
+    patch(); totals();
+  }
+  function evByRow(r){ for(var i=0;i<S.events.length;i++) if(S.events[i].r===r) return S.events[i]; }
+  function patch(){
+    var ae=document.activeElement;
+    function set(el,v){ v=v==null?"":String(v); if(el!==ae&&!dirty[el.dataset.r+":"+el.dataset.c]&&el.value!==v) el.value=v; }
+    if($("title")!==ae&&!dirty.title) $("title").value=S.title;
+    document.querySelectorAll("#thead input.name").forEach(function(el){ set(el,S.teams[+el.dataset.c-2]); });
+    document.querySelectorAll("#tbody input").forEach(function(el){
+      var e=evByRow(+el.dataset.r); if(!e) return;
+      var c=+el.dataset.c; set(el,c===1?e.name:e.s[c-2]);
+    });
+  }
+  function totals(){
+    var tds=document.querySelectorAll("#tfoot td.tot");
+    S.teams.forEach(function(t,i){ var sum=0; S.events.forEach(function(e){ sum+=num(e.s[i]); }); if(tds[i]) tds[i].textContent=fmt(sum); });
+  }
+
+  /* ---- 入力 ---- */
+  document.addEventListener("input",function(ev){
+    var t=ev.target; if(!S||isDisp) return;
+    if(t.id==="title"){ S.title=t.value; change({op:"title",v:t.value},"title"); return; }
+    if(t.dataset.r==null) return;
+    var r=+t.dataset.r, c=+t.dataset.c, dk=r+":"+c, msg={op:"set",r:r,c:c,v:t.value};
+    if(r===1){ S.teams[c-2]=t.value; }
+    else{
+      var e=evByRow(r); if(!e) return;
+      if(c===1) e.name=t.value; else{ e.s[c-2]=t.value; msg.chk=e.name; totals(); }
+    }
+    change(msg,dk);
+  });
+  document.addEventListener("keydown",function(ev){
+    var t=ev.target;
+    if(ev.key==="Enter"&&t.classList&&t.classList.contains("cell")){
+      ev.preventDefault();
+      var rows=S.events.map(function(e){return e.r;}), nx=rows[rows.indexOf(+t.dataset.r)+1];
+      if(nx){ var el=document.querySelector('input.cell[data-r="'+nx+'"][data-c="'+t.dataset.c+'"]'); if(el){ el.focus(); el.select(); } }
+    }
+  });
+  document.addEventListener("click",function(ev){
+    var t=ev.target; if(!t.dataset||!t.dataset.del||!S) return;
+    var e=evByRow(+t.dataset.del);
+    if(e&&confirm("「"+e.name+"」を削除しますか？")) send({op:"delRow",r:e.r,chk:e.name},"del",0);
+  });
+  $("addEvent").onclick=function(){ send({op:"addRow",name:"新しい種目"},"add",0); };
+  $("addTeam").onclick=function(){ if(S&&S.teams.length>=8){ say("組は8つまで追加できます。"); return; } send({op:"addCol",name:"新しい組"},"addc",0); };
+  $("reset").onclick=function(){ if(confirm("入力した点数をすべて消しますか？(組や種目の名前は残ります)")) send({op:"clear"},"clr",0); };
+  $("pwSave").onclick=function(){ key=$("pw").value; lsSet("undokai-key",key); say("パスワードを保存しました。"); };
+
+  /* ---- 開始 ---- */
+  if(!API_URL){ $("setup").style.display="block"; status("未設定","ng"); return; }
+  refresh();
+  setInterval(refresh,POLL_MS);
+})();
+</script>
+
+
+</body></html>
